@@ -1,0 +1,25 @@
+# Ignore caches and docs
+.cache
+__pycache__
+docs
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual Environment
+.env
+.venv
+venv
+ENV
+
+# Various Project Settings
+.spyderproject
+.spyproject
+.ropeproject
+.idea
+.vscode
+*.code-workspace
+.vs
+*.pyproj
+*.sln
+
