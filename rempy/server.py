@@ -9,7 +9,7 @@ def run(connection):
 
     # Wait for patch and to delete
     # TODO
-    patch_path, deleted = "foo.zip", []
+    patch_path, deleted = "$PROJECT_NAME.zip", []
 
     # Delete files
     # TODO
