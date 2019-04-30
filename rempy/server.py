@@ -5,13 +5,16 @@ import shutil
 from rempy.lib.compute_patch import get_files_hash_map, apply_patch
 
 processes = {}
+proc_id = 0
 
 def run(entanglement):
+    global proc_id
     project_name = entanglement.get("project_name")
     project_path = os.path.join(os.environ["REMPY_HOME"], project_name)
     if not os.path.exists(project_path):
         os.makedirs(project_path)
     env = entanglement.get("env")
+    rprint = entanglement.remote_fun("print")
     
     if not env["reconnect"]:
         hash_map = get_files_hash_map(project_path)
@@ -43,11 +46,13 @@ def run(entanglement):
         command = entanglement.get("command")
 
         # Start program
-        # TODO
+        env["reconnect"] = "{}_{}".format(project_name, proc_id)
+        proc_id += 1
+        rprint("Assigned ID for reconnecting: {}".format(env["reconnect"]))
+        rprint(command)
+        #TODO
 
     # Forward outputs/inputs to network
-    rprint = entanglement.remote_fun("print")
-    rprint("Hello World!")
     # TODO
 
     # Close connection

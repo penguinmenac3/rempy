@@ -64,7 +64,7 @@ def main(args):
         server_hashes = entanglement.get("hash_map")
 
         # Pack patch
-        patch_file, deleted = pack_patch(cwd, server_hashes, verbose=True)
+        patch_file, deleted = pack_patch(cwd, server_hashes)
         with open(patch_file, mode='rb') as file:
             patch_file_content = file.read()
         os.remove(patch_file)
