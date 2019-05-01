@@ -93,7 +93,7 @@ class Server(object):
                 command,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 shell=False, preexec_fn=preex,
-                env=osenv, bufsize=1)
+                env=osenv, bufsize=1, cwd=project_path)
             print("Started Process: {}".format(pname))
             self.results[pname] = ""
             Thread(target=self.pollPipe, args=(pname,)).start()
