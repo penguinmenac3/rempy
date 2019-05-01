@@ -102,8 +102,9 @@ class Server(object):
                 preex = os.setsid
             except AttributeError:
                 print("Windows: Feature not availible.")
-            osenv = os.environ
+            osenv = os.environ.copy()
             osenv["PYTHONUNBUFFERED"] = "True"
+            osenv["NAME"] = env["name"]
             self.processes[pname] = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
