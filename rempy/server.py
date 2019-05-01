@@ -113,7 +113,14 @@ class Server(object):
         entanglement.close()
 
 def main(args):
-    print("REMPY_HOME={}".format(os.environ["REMPY_HOME"]))
+    rempy_home = "/tmp/rempy"
+    if os.name == "nt":
+        rempy_home = os.path.join(os.environ["TEMP"], "rempy")
+    if "REMPY_HOME" in os.environ:
+        rempy_home = os.environ["REMPY_HOME"]
+    print("REMPY_HOME={}".format(rempy_home))
+    os.environ["REMPY_HOME"] = rempy_home
+
     server = Server()
     host = "*"
     port = 24454
