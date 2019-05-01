@@ -57,7 +57,6 @@ def parse_args(args, conf):
         commit_msg = conf["commit"].replace("$NAME", env["name"]).replace("$TIMESTAMP", timestamp)
         os.system("git add --all")
         os.system("git commit -m \"{}\"".format(commit_msg))
-        os.system("git push")
     if "tag" in conf:
         tag_msg = conf["tag"].replace("$NAME", env["name"]).replace("$TIMESTAMP", timestamp)
         # TODO implement tagging
