@@ -23,28 +23,27 @@ def parse_args(args):
         env["reconnect"] = args[2]
 
     elif args[1] == "-m":  # Python Module
-        command = "python " + " ".join(args[1:])
+        command = ["python"] + args[1:]
         env["mode"] = "python"
     elif args[1].endswith(".py"):  # Python Script
-        command = "python " + " ".join(args[1:])
+        command = ["python"] + args[1:]
         env["mode"] = "python"
     
     elif args[1].endswith(".sh"):  # Bash Script
-        command = "sh " + " ".join(args[1:])
+        command = ["sh"] + args[1:]
         env["mode"] = "shell"
 
     elif args[1].endswith(".js"):  # Nodejs Script
-        command = "nodejs " + " ".join(args[1:])
+        command = ["nodejs"] + args[1:]
         env["mode"] = "nodejs"
     
     else:  # Anything else is unknown and passed through
-        command = " ".join(args[1:])
+        command = args[1:]
 
     return host, port, command, env
 
 
 def main(args):
-    print("Client")
     cwd = os.path.normpath(os.path.abspath("."))
     project_name = cwd.replace("\\", "/").split("/")[-1]
 
