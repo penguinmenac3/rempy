@@ -33,12 +33,11 @@ def parse_args(args, conf):
     env = {
         "mode": "shell",
         "gpus": "all",
-        "reconnect": False,
-        "name": None
+        "reconnect": False
     }
     idx = 1
     if args[idx] == "--name":
-        env["name"] == args[idx + 1]
+        env["name"] = args[idx + 1]
         idx = idx + 2
     elif conf["name-required"]:
         raise RuntimeError("A name is required.")
