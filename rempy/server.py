@@ -8,8 +8,23 @@ from threading import Thread, Condition
 from functools import partial
 import subprocess
 import signal
+import json
 
 from rempy.lib.compute_patch import get_files_hash_map, apply_patch
+
+
+CONFIG_PATH = os.path.join(os.environ["userprofile"] if os.name == "nt" else os.environ["HOME"], ".rempy-server.json")
+
+
+def config():
+    conf = {
+        "host": "*",
+        "port": 24454,
+        "password": "42"
+    }
+    with open(CONFIG_PATH, "w") as f:
+        f.write(json.dumps(conf, indent=4, sort_keys=True))
+    print("Created basic config at {}. You should change at least the password!".format(CONFIG_PATH))
 
 
 class Server(object):
@@ -112,7 +127,12 @@ class Server(object):
         # Close connection
         entanglement.close()
 
-def main(args):
+def main():
+    if not os.path.exists(CONFIG_PATH):
+        print("You must create a config first via 'rempy config-server'.")
+        return
+    with open(CONFIG_PATH, "r") as f:
+        conf = json.loads(f.read())
     rempy_home = "/tmp/rempy"
     if os.name == "nt":
         rempy_home = os.path.join(os.environ["TEMP"], "rempy")
@@ -122,9 +142,9 @@ def main(args):
     os.environ["REMPY_HOME"] = rempy_home
 
     server = Server()
-    host = "*"
-    port = 24454
-    password = "42"
+    host = conf["host"]
+    port = conf["port"]
+    password = conf["password"]
     
     # Start a listener for connections
     entangle.listen(host=host, port=port, password=password, callback=server.run)

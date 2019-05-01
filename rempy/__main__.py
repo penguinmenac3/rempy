@@ -7,13 +7,15 @@ def print_help():
     print("rempy server.com -m foo.bar  # to run a python module remotely")
     print("")
     print("Run a server")
-    print("rempy config.json    # To run a server")
+    print("rempy  # To run a server")
     print("")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print_help()
-    elif sys.argv[1].endswith(".json"):
-        server.main(sys.argv[1:])
+        server.main()
+    elif sys.argv[1] == "config-server":
+        server.config()
+    elif sys.argv[1] == "config-client":
+        client.config()
     else:
         client.main(sys.argv[1:])
