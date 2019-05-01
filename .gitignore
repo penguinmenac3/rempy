@@ -4,6 +4,9 @@ tests/results.txt
 .cache
 __pycache__
 docs
+build
+dist
+*.egg-info
 
 # Jupyter Notebook
 .ipynb_checkpoints
