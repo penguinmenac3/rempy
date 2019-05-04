@@ -33,14 +33,16 @@ def parse_args(args, conf):
     env = {
         "mode": "shell",
         "gpus": "all",
-        "reconnect": False
+        "reconnect": False,
+        "name": ""
     }
     idx = 1
     if args[idx] == "--name":
         env["name"] = args[idx + 1]
         idx = idx + 2
     elif conf["name-required"]:
-        raise RuntimeError("A name is required.")
+        while env["name"] == "":
+            env["name"] = input("A name for your run is required! > ")
 
     if args[idx] == "--no-commit":
         del conf["commit"]
