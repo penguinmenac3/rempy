@@ -127,6 +127,9 @@ class Server(object):
                 pname = res
 
         entanglement.pname = pname
+        if env["kill"]:
+            self.processes[pname].kill()
+            print("Killed Process: {}".format(pname))
 
         # Forward outputs/inputs to network
         while pname in self.results:

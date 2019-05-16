@@ -34,13 +34,19 @@ def parse_args(args, conf):
         "mode": "shell",
         "gpus": "all",
         "reconnect": False,
-        "name": ""
+        "name": "",
+        "kill": False
     }
     reconnect = False
     idx = 1
     if args[idx] == "-r":  # Reconnect
         command = None
         reconnect = True
+        env["reconnect"] = args[idx + 1]
+    if args[idx] == "--kill":  # kill
+        command = None
+        reconnect = True
+        env["kill"] = True
         env["reconnect"] = args[idx + 1]
 
     if args[idx] == "--name":
