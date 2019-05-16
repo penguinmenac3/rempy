@@ -5,10 +5,10 @@ import sys
 print("Hello World!")
 print(sys.argv[1:])
 
-N = 100
+N = 10000
 for i in range(N):
     print("\rWaiting for: {}    ".format(N-i), end="")
-    sleep(1)
+    sleep(0.01)
 print()
 
 import tensorflow as tf

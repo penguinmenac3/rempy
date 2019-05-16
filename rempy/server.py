@@ -52,7 +52,7 @@ class Server(object):
         print("Finished Process: {}".format(pname))
 
     def run(self, entanglement):
-        local_result = ""
+        local_result = 0
         project_name = entanglement.get("project_name")
         project_path = os.path.join(os.environ["REMPY_HOME"], project_name)
         if not os.path.exists(project_path):
@@ -91,7 +91,7 @@ class Server(object):
             command = entanglement.get("command")
 
             # Start program
-            env["reconnect"] = "{}_{}".format(project_name, self.proc_id)
+            env["reconnect"] = "{}.{}".format(self.proc_id, env["name"])
             pname = env["reconnect"]
             self.proc_id += 1
             rprint("pname: {}".format(env["reconnect"]))
@@ -113,12 +113,26 @@ class Server(object):
             print("Started Process: {}".format(pname))
             self.results[pname] = ""
             Thread(target=self.pollPipe, args=(pname,)).start()
+        else:
+            if pname not in self.results:
+                res = None
+                for k in self.results.keys():
+                    tmp = ".".join(k.split(".")[1:])
+                    if tmp == pname:
+                        res = k
+                if res is None:
+                    rprint("Unknown process pick one: {}".format(list(self.results.keys())))
+                    entanglement.close()
+                    return
+                pname = res
+
+        entanglement.pname = pname
 
         # Forward outputs/inputs to network
         while pname in self.results:
-            tmp = self.results[pname]
-            rprint(tmp.replace(local_result, ""), end="")
-            local_result = tmp
+            tmp = self.results[pname][local_result:]
+            local_result = len(self.results[pname])
+            rprint(tmp, end="")
             if pname not in self.processes:
                 break
             self.__condition.acquire()

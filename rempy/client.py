@@ -8,7 +8,7 @@ from rempy.lib.compute_patch import pack_patch
 
 
 CONFIG_PATH = os.path.join(os.environ["userprofile"] if os.name == "nt" else os.environ["HOME"], ".rempy-client.json")
-
+DEFAULT_PORT = 24454
 
 def config():
     conf = {
@@ -24,7 +24,7 @@ def config():
 
 def parse_args(args, conf):
     host = args[0]
-    port = 24454
+    port = DEFAULT_PORT
     if ":" in host:
         tmp = host.split(":")
         assert len(tmp) == 2, "Only one : to separate hostname and port is allowed!"
@@ -36,15 +36,21 @@ def parse_args(args, conf):
         "reconnect": False,
         "name": ""
     }
+    reconnect = False
     idx = 1
+    if args[idx] == "-r":  # Reconnect
+        command = None
+        reconnect = True
+        env["reconnect"] = args[idx + 1]
+
     if args[idx] == "--name":
         env["name"] = args[idx + 1]
         idx = idx + 2
     elif conf["name-required"]:
-        while env["name"] == "":
+        while env["name"] == "" and not reconnect:
             env["name"] = input("A name for your run is required! > ")
 
-    if args[idx] == "--no-commit":
+    if args[idx] == "--no-commit" or reconnect:
         del conf["commit"]
         del conf["tag"]
         idx = idx + 1
@@ -62,10 +68,8 @@ def parse_args(args, conf):
         tag_msg = conf["tag"].replace("$NAME", env["name"]).replace("$TIMESTAMP", timestamp)
         # TODO implement tagging
 
-    if args[idx] == "-r":  # Reconnect
+    if reconnect:
         command = None
-        env["reconnect"] = args[idx + 1]
-
     elif args[idx] == "-m":  # Python Module
         command = ["python"] + args[idx:]
         env["mode"] = "python"
@@ -126,5 +130,13 @@ def main(args):
 
         # Tell server what file to run and how and then forward output/input until connection is closed by server
         entanglement.command = command
-
-    entanglement.join()
+    try:
+        entanglement.join()
+    except KeyboardInterrupt:
+        pname = entanglement.pname
+        entanglement.close()
+        print("Detached.")
+        if port != DEFAULT_PORT:
+            print("Reconnect by:    rempy {}:{} -r {}".format(host, port, pname))
+        else:
+            print("Reconnect by:    rempy {} -r {}".format(host, pname))
