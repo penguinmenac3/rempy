@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -25,6 +25,7 @@ setup(
     url='https://github.com/penguinmenac3/rempy',
     download_url='https://github.com/penguinmenac3/rempy/tarball/' + __version__,
     license='BSD',
+    long_description_content_type="text/markdown",
     classifiers=[
       'Development Status :: 3 - Alpha',
       'Intended Audience :: Developers',
