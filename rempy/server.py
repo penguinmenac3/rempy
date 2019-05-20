@@ -11,6 +11,7 @@ import signal
 import json
 
 from rempy.lib.compute_patch import get_files_hash_map, apply_patch
+from rempy.lib.console_buffer import ConsoleBuffer, ConsoleState
 
 
 CONFIG_PATH = os.path.join(os.environ["userprofile"] if os.name == "nt" else os.environ["HOME"], ".rempy-server.json")
@@ -38,8 +39,8 @@ class Server(object):
         while pname in self.processes:
             line = self.processes[pname].stdout.read(1).decode("utf-8")
             if line != '':
-                #the real code does filtering here
-                self.results[pname] = self.results[pname] + line
+                # the real code does filtering here
+                self.results[pname].append(line)
                 self.__condition.acquire()
                 self.__condition.notify_all()
                 self.__condition.release()
@@ -52,7 +53,7 @@ class Server(object):
         print("Finished Process: {}".format(pname))
 
     def run(self, entanglement):
-        local_result = 0
+        local_result = ConsoleState()
         project_name = entanglement.get("project_name")
         project_path = os.path.join(os.environ["REMPY_HOME"], project_name)
         if not os.path.exists(project_path):
@@ -60,7 +61,7 @@ class Server(object):
         env = entanglement.get("env")
         rprint = entanglement.remote_fun("print")
         pname = env["reconnect"]
-        
+
         if not pname:
             hash_map = get_files_hash_map(project_path)
             entanglement.hash_map = hash_map
@@ -96,7 +97,7 @@ class Server(object):
             self.proc_id += 1
             rprint("pname: {}".format(env["reconnect"]))
             rprint()
-            
+
             preex = None
             try:
                 preex = os.setsid
@@ -111,7 +112,7 @@ class Server(object):
                 shell=False, preexec_fn=preex,
                 env=osenv, bufsize=1, cwd=project_path)
             print("Started Process: {}".format(pname))
-            self.results[pname] = ""
+            self.results[pname] = ConsoleBuffer()
             Thread(target=self.pollPipe, args=(pname,)).start()
         else:
             if pname not in self.results:
@@ -133,9 +134,8 @@ class Server(object):
 
         # Forward outputs/inputs to network
         while pname in self.results:
-            tmp = self.results[pname][local_result:]
-            local_result = len(self.results[pname])
-            rprint(tmp, end="")
+            update = self.results[pname].get_update(local_result)
+            rprint(update, end="")
             if pname not in self.processes:
                 break
             self.__condition.acquire()
@@ -144,6 +144,7 @@ class Server(object):
 
         # Close connection
         entanglement.close()
+
 
 def main():
     if not os.path.exists(CONFIG_PATH):
@@ -163,6 +164,6 @@ def main():
     host = conf["host"]
     port = conf["port"]
     password = conf["password"]
-    
+
     # Start a listener for connections
     entangle.listen(host=host, port=port, password=password, callback=server.run)
