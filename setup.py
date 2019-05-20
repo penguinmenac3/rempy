@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -27,9 +27,9 @@ setup(
     license='BSD',
     long_description_content_type="text/markdown",
     classifiers=[
-      'Development Status :: 3 - Alpha',
-      'Intended Audience :: Developers',
-      'Programming Language :: Python',
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Programming Language :: Python',
     ],
     keywords='',
     packages=find_packages(exclude=['docs']),

@@ -10,6 +10,7 @@ from rempy.lib.compute_patch import pack_patch
 CONFIG_PATH = os.path.join(os.environ["userprofile"] if os.name == "nt" else os.environ["HOME"], ".rempy-client.json")
 DEFAULT_PORT = 24454
 
+
 def config():
     conf = {
         "password": "42",
@@ -29,7 +30,7 @@ def parse_args(args, conf):
         tmp = host.split(":")
         assert len(tmp) == 2, "Only one : to separate hostname and port is allowed!"
         host, port = tmp[0], int(tmp[1])
-    
+
     env = {
         "mode": "shell",
         "gpus": "all",
@@ -64,7 +65,7 @@ def parse_args(args, conf):
         raise RuntimeError("For commiting or tagging a name is mandatory!")
     elif "tag" in conf and not "commit" in conf:
         raise RuntimeError("You must enable commit in order to activate tagging.")
-    
+
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     if "commit" in conf:
         commit_msg = conf["commit"].replace("$NAME", env["name"]).replace("$TIMESTAMP", timestamp)
@@ -82,7 +83,7 @@ def parse_args(args, conf):
     elif args[idx].endswith(".py"):  # Python Script
         command = ["python"] + args[idx:]
         env["mode"] = "python"
-    
+
     elif args[idx].endswith(".sh"):  # Bash Script
         command = ["sh"] + args[idx:]
         env["mode"] = "shell"
@@ -90,7 +91,7 @@ def parse_args(args, conf):
     elif args[idx].endswith(".js"):  # Nodejs Script
         command = ["nodejs"] + args[idx:]
         env["mode"] = "nodejs"
-    
+
     else:  # Anything else is unknown and passed through
         command = args[idx:]
 
@@ -111,6 +112,7 @@ def main(args):
 
     # Connect to server
     entanglement = entangle.connect(host=host, port=port, password=password)
+
     def rprint(*args, **kwargs):
         print(*args, **kwargs)
     entanglement.print = rprint
@@ -141,6 +143,7 @@ def main(args):
     except KeyboardInterrupt:
         pname = entanglement.pname
         entanglement.close()
+        print()
         print("Detached.")
         if port != DEFAULT_PORT:
             print("Reconnect by:    rempy {}:{} -r {}".format(host, port, pname))

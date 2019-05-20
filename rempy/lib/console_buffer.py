@@ -13,7 +13,7 @@ class ConsoleBuffer(object):
         self.__current_line_iter = 0
         self.__theoretical_length = 0
 
-    def append(self, character):
+    def append(self, character: str):
         if character == "\r":
             self.__value = self.__value[:self.__latest_new_line]
             self.__current_line_iter += 1
@@ -26,8 +26,8 @@ class ConsoleBuffer(object):
 
     def get_update(self, state: ConsoleState):
         # if we are in the current line but the line version is wrong update from the begining of the line.
-        if state.line_version < self.__current_line and state.line == self.__current_line:
-            update = self.__value[(self.__latest_new_line + 1):]
+        if state.line_version < self.__current_line_iter and state.line == self.__current_line:
+            update = self.__value[(self.__latest_new_line):]
         else:
             update = self.__value[state.index:]
         state.index = len(self.__value)
