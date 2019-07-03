@@ -12,15 +12,22 @@ class ConsoleBuffer(object):
         self.__current_line = 0
         self.__current_line_iter = 0
         self.__theoretical_length = 0
+        self.__rollback = False
 
     def append(self, character: str):
         if character == "\r":
-            self.__value = self.__value[:self.__latest_new_line]
-            self.__current_line_iter += 1
+            self.__rollback = True  # Only mark rollback, since windows uses it before newline
+            return
         elif character == "\n":
             self.__latest_new_line = len(self.__value)
             self.__current_line_iter = 0
             self.__current_line += 1
+            self.__rollback = False
+        elif self.__rollback:
+            self.__value = self.__value[:self.__latest_new_line]
+            self.__value += "\r"
+            self.__current_line_iter += 1
+            self.__rollback = False
         self.__value += character
         self.__theoretical_length += 1
 
