@@ -16,7 +16,10 @@ def config():
         "password": "42",
         "commit": "Run: $NAME_$TIMESTAMP",
         "tag": "$NAME_$TIMESTAMP",
-        "name-required": True
+        "name-required": True,
+        "aliase": {
+            "example": "localhost:24454"
+        }
     }
     with open(CONFIG_PATH, "w") as f:
         f.write(json.dumps(conf, indent=4, sort_keys=True))
@@ -25,6 +28,8 @@ def config():
 
 def parse_args(args, conf):
     host = args[0]
+    if "aliase" in conf and host in conf["aliase"]:
+        host = conf["aliase"][host]
     port = DEFAULT_PORT
     if ":" in host:
         tmp = host.split(":")
