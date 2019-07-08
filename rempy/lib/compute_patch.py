@@ -5,7 +5,7 @@ import zipfile
 import time
 import datetime
 
-PYTHON_IGNORE_LIST = ["__pycache__", "*.pyc"]
+PYTHON_IGNORE_LIST = ["__pycache__", "*.pyc", ".ipynb_checkpoints", ".git", ".svn", ".hg", "CSV", ".DS_Store", "*.egg-info"]
 
 def __md5(fname):
     hash_md5 = hashlib.md5()
@@ -42,7 +42,8 @@ def __get_all_files(root, forbidden_list=PYTHON_IGNORE_LIST):
     return all_files
 
 
-def __get_empty_folders(root, forbidden_list=PYTHON_IGNORE_LIST):
+def __get_empty_folders(root, forbidden_list):
+    forbidden_list.extend(PYTHON_IGNORE_LIST)
     empty_folders = []
     for path, subdirs, files in os.walk(root):
         files = [x for x in files if not __ignore(x, forbidden_list)]
@@ -70,14 +71,15 @@ def __diff(should_be, current_state, verbose=False):
                 print("Deleted {}".format(k))
     return changed, deleted
 
-def get_files_hash_map(root, forbidden_list=PYTHON_IGNORE_LIST):
+def get_files_hash_map(root, forbidden_list):
+    forbidden_list.extend(PYTHON_IGNORE_LIST)
     files = __get_all_files(root, forbidden_list)
     md5s = [__md5(os.path.join(root, f)) for f in files]
     hash_map = dict(zip(files, md5s))
     return hash_map
 
-def pack_patch(folder, server_hashes, verbose=False):
-    should_be = get_files_hash_map(folder)
+def pack_patch(folder, server_hashes, forbidden_list=[], verbose=False):
+    should_be = get_files_hash_map(folder, forbidden_list=forbidden_list)
     changed, deleted = __diff(should_be, server_hashes, verbose=verbose)
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     patch_name = timestamp  + "_" + folder.replace("\\", "/").split("/")[-1] + ".zip"
@@ -98,13 +100,13 @@ def apply_patch(name, target):
         zip_ref.extractall(target)
 
     # remove emtpy dirs
-    empty_dirs = __get_empty_folders(target)
+    empty_dirs = __get_empty_folders(target, [])
     for d in empty_dirs:
         if os.path.exists(d):
             shutil.rmtree(d)
 
 def test_diff():
-    server_hashes = get_files_hash_map(".")
+    server_hashes = get_files_hash_map(".", [])
     server_hashes["requirements.txt"] = "asdjwoegjowjf"
     server_hashes["foobar.txt"] = "siudgusejfroj"
     del server_hashes["README.md"]

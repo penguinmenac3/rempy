@@ -129,7 +129,12 @@ def main(args):
         server_hashes = entanglement.get("hash_map")
 
         # Pack patch
-        patch_file, deleted = pack_patch(cwd, server_hashes)
+        ignore_list = []
+        if os.path.exists(".ignore"):
+            with open(".ignore", "r") as f:
+                ignore_list = [q.rstrip() for q in f.readlines()]
+
+        patch_file, deleted = pack_patch(cwd, server_hashes, forbidden_list=ignore_list)
         with open(patch_file, mode='rb') as file:
             patch_file_content = file.read()
         os.remove(patch_file)
