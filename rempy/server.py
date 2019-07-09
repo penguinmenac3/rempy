@@ -63,7 +63,7 @@ class Server(object):
         pname = env["reconnect"]
 
         if not pname:
-            hash_map = get_files_hash_map(project_path)
+            hash_map = get_files_hash_map(project_path, forbidden_list=[])
             entanglement.hash_map = hash_map
 
             # Wait for patch and to delete
