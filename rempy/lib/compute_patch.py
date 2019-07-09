@@ -24,14 +24,14 @@ def __ignore(candidate, forbidden_list):
         if item.endswith("*"):
             start_list.append(item.replace("*", ""))
     # Test
-    res = candidate in forbidden_list
+    ignore_file = candidate in forbidden_list
     for item in start_list:
-        res |= candidate.startswith(item)
+        ignore_file |= candidate.startswith(item)
     for item in end_list:
-        res |= candidate.endswith(item)
-    return res
+        ignore_file |= candidate.endswith(item)
+    return ignore_file
 
-def __get_all_files(root, forbidden_list=PYTHON_IGNORE_LIST):
+def __get_all_files(root, forbidden_list):
     all_files = []
     root_with_sep = root + os.sep
     for path, subdirs, files in os.walk(root):
