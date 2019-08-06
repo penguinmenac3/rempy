@@ -119,6 +119,7 @@ def main(args):
 
     # Connect to server
     entanglement = entangle.connect(host=host, port=port, password=password)
+    entanglement.protocol = "rempy"
 
     def rprint(*args, **kwargs):
         print(*args, **kwargs)
