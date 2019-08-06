@@ -122,13 +122,13 @@ def main(args):
 
     def rprint(*args, **kwargs):
         print(*args, **kwargs)
-    entanglement.print = rprint
-    entanglement.project_name = project_name
-    entanglement.env = env
+    entanglement.rempy_print = rprint
+    entanglement.rempy_project_name = project_name
+    entanglement.rempy_env = env
 
     if not env["reconnect"]:
         # Wait for file_hash_map from server
-        server_hashes = entanglement.get("hash_map")
+        server_hashes = entanglement.get("rempy_hash_map")
 
         # Pack patch
         ignore_list = []
@@ -146,14 +146,14 @@ def main(args):
         print("Patch Size: {}".format(len(patch_file_content)))
 
         # Send patchfile and list of deleted files to server
-        entanglement.patch = (patch_file_content, deleted)
+        entanglement.rempy_patch = (patch_file_content, deleted)
 
         # Tell server what file to run and how and then forward output/input until connection is closed by server
-        entanglement.command = command
+        entanglement.rempy_command = command
     try:
         entanglement.join()
     except KeyboardInterrupt:
-        pname = entanglement.pname
+        pname = entanglement.rempy_pname
         entanglement.close()
         print()
         print("Detached.")

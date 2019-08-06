@@ -30,7 +30,21 @@ def config():
 
 
 class Server(object):
-    def __init__(self, conf):
+    def __init__(self, conf=None):
+        if conf is None:
+            if not os.path.exists(CONFIG_PATH):
+                raise RuntimeError("You must create a config first via 'rempy config-server'.")
+            with open(CONFIG_PATH, "r") as f:
+                conf = json.loads(f.read())
+        rempy_home = "/tmp/rempy"
+        if os.name == "nt":
+            rempy_home = os.path.join(os.environ["TEMP"], "rempy")
+        if "REMPY_HOME" in os.environ:
+            rempy_home = os.environ["REMPY_HOME"]
+        print("REMPY_HOME={}".format(rempy_home))
+        os.environ["REMPY_HOME"] = rempy_home
+
+        self.conf = conf
         self.processes = {}
         self.results = {}
         self.__condition = Condition()
@@ -90,23 +104,23 @@ class Server(object):
         self.__condition.release()
         print("Finished Process: {}".format(pname))
 
-    def run(self, entanglement):
+    def callback(self, entanglement):
         gpu = None
         local_result = ConsoleState()
-        project_name = entanglement.get("project_name")
+        project_name = entanglement.get("rempy_project_name")
         project_path = os.path.join(os.environ["REMPY_HOME"], project_name)
         if not os.path.exists(project_path):
             os.makedirs(project_path)
-        env = entanglement.get("env")
-        rprint = entanglement.remote_fun("print")
+        env = entanglement.get("rempy_env")
+        rprint = entanglement.remote_fun("rempy_print")
         pname = env["reconnect"]
 
         if not pname:
             hash_map = get_files_hash_map(project_path, forbidden_list=[])
-            entanglement.hash_map = hash_map
+            entanglement.rempy_hash_map = hash_map
 
             # Wait for patch and to delete
-            patch_file_content, deleted = entanglement.get("patch")
+            patch_file_content, deleted = entanglement.get("rempy_patch")
 
             # Decode
             patch_file_content = base64.decodestring(patch_file_content.encode("ascii"))
@@ -128,7 +142,7 @@ class Server(object):
             apply_patch(project_path, project_path)
 
             # Wait for instructions what to run and how
-            command = entanglement.get("command")
+            command = entanglement.get("rempy_command")
 
             # Start program
             env["reconnect"] = "{}.{}".format(self.proc_id, env["name"])
@@ -172,7 +186,7 @@ class Server(object):
                     return
                 pname = res
 
-        entanglement.pname = pname
+        entanglement.rempy_pname = pname
         if env["kill"]:
             self.processes[pname].kill()
             print("Killed Process: {}".format(pname))
@@ -192,23 +206,9 @@ class Server(object):
 
 
 def main():
-    if not os.path.exists(CONFIG_PATH):
-        print("You must create a config first via 'rempy config-server'.")
-        return
-    with open(CONFIG_PATH, "r") as f:
-        conf = json.loads(f.read())
-    rempy_home = "/tmp/rempy"
-    if os.name == "nt":
-        rempy_home = os.path.join(os.environ["TEMP"], "rempy")
-    if "REMPY_HOME" in os.environ:
-        rempy_home = os.environ["REMPY_HOME"]
-    print("REMPY_HOME={}".format(rempy_home))
-    os.environ["REMPY_HOME"] = rempy_home
-
-    server = Server(conf)
-    host = conf["host"]
-    port = conf["port"]
-    password = conf["password"]
-
+    server = Server()
+    host = server.conf["host"]
+    port = server.conf["port"]
+    password = server.conf["password"]
     # Start a listener for connections
-    entangle.listen(host=host, port=port, password=password, callback=server.run)
+    entangle.listen(host=host, port=port, password=password, callback=server.callback)
