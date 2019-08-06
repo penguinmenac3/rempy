@@ -21,7 +21,9 @@ def config():
     conf = {
         "host": "*",
         "port": 24454,
-        "password": "42",
+        "users": {
+            "deepthought": "42"
+        },
         "gpus": [0]
     }
     with open(CONFIG_PATH, "w") as f:
@@ -209,6 +211,6 @@ def main():
     server = Server()
     host = server.conf["host"]
     port = server.conf["port"]
-    password = server.conf["password"]
+    users = server.conf["users"]
     # Start a listener for connections
-    entangle.listen(host=host, port=port, password=password, callback=server.callback)
+    entangle.listen(host=host, port=port, users=users, callback=server.callback)

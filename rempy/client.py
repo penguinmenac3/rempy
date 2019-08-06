@@ -13,7 +13,10 @@ DEFAULT_PORT = 24454
 
 def config():
     conf = {
-        "password": "42",
+        "user": {
+            "name": "deepthought",
+            "password": "42"
+        },
         "commit": "Run: $NAME_$TIMESTAMP",
         "tag": "$NAME_$TIMESTAMP",
         "name-required": True,
@@ -115,10 +118,11 @@ def main(args):
     project_name = cwd.replace("\\", "/").split("/")[-1]
 
     host, port, command, env = parse_args(args, conf)
-    password = conf["password"]
+    user = conf["user"]["name"]
+    password = conf["user"]["password"]
 
     # Connect to server
-    entanglement = entangle.connect(host=host, port=port, password=password)
+    entanglement = entangle.connect(host=host, port=port, password=password, user=user)
     entanglement.protocol = "rempy"
 
     def rprint(*args, **kwargs):
