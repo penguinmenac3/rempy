@@ -21,7 +21,8 @@ def config():
     conf = {
         "host": "*",
         "port": 24454,
-        "password": "42"
+        "password": "42",
+        "gpus": [0]
     }
     with open(CONFIG_PATH, "w") as f:
         f.write(json.dumps(conf, indent=4, sort_keys=True))
@@ -29,11 +30,48 @@ def config():
 
 
 class Server(object):
-    def __init__(self):
+    def __init__(self, conf):
         self.processes = {}
         self.results = {}
         self.__condition = Condition()
+        self.__condition_gpu_assignment = Condition()
         self.proc_id = 0
+        self.gpus = []
+        if "gpus" in conf:
+            self.gpus = conf["gpus"]
+        self.assigned_gpus = []
+
+    def is_free(self, gpu):
+        if gpu in self.assigned_gpus:
+            return False
+
+        # TODO check if gpu is occupied by foreign process.
+
+        return True
+
+    def _get_free_gpu(self):
+        for x in self.gpus:
+            if self.is_free(x):
+                return x
+        return None
+
+    def await_gpu(self):
+        gpu = self._get_free_gpu()
+        while gpu is None:
+            self.__condition_gpu_assignment.acquire()
+            self.__condition_gpu_assignment.wait()
+            self.__condition_gpu_assignment.release()
+            gpu = self._get_free_gpu()
+        assert gpu is not None
+
+        self.assigned_gpus.append(gpu)
+        return gpu
+
+    def free_gpu(self, gpu):
+        self.assigned_gpus.remove(gpu)
+        self.__condition_gpu_assignment.acquire()
+        self.__condition_gpu_assignment.notify_all()
+        self.__condition_gpu_assignment.release()
 
     def pollPipe(self, pname):
         while pname in self.processes:
@@ -53,6 +91,7 @@ class Server(object):
         print("Finished Process: {}".format(pname))
 
     def run(self, entanglement):
+        gpu = None
         local_result = ConsoleState()
         project_name = entanglement.get("project_name")
         project_path = os.path.join(os.environ["REMPY_HOME"], project_name)
@@ -106,6 +145,12 @@ class Server(object):
             osenv = os.environ.copy()
             osenv["PYTHONUNBUFFERED"] = "True"
             osenv["NAME"] = env["name"]
+            if "gpu" in env:
+                if env["gpu"] == "schedule":
+                    gpu = self.await_gpu()
+                else:
+                    gpu = env["gpu"]
+                osenv["CUDA_VISIBLE_DEVICES"] = str(gpu)
             self.processes[pname] = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -160,7 +205,7 @@ def main():
     print("REMPY_HOME={}".format(rempy_home))
     os.environ["REMPY_HOME"] = rempy_home
 
-    server = Server()
+    server = Server(conf)
     host = conf["host"]
     port = conf["port"]
     password = conf["password"]

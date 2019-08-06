@@ -38,7 +38,6 @@ def parse_args(args, conf):
 
     env = {
         "mode": "shell",
-        "gpus": "all",
         "reconnect": False,
         "name": "",
         "kill": False
@@ -55,6 +54,9 @@ def parse_args(args, conf):
         env["kill"] = True
         env["reconnect"] = args[idx + 1]
 
+    if args[idx] == "--gpu":  # GPU
+        env["gpu"] = args[idx + 1]
+        idx = idx + 2
     if args[idx] == "--name":
         env["name"] = args[idx + 1]
         idx = idx + 2
