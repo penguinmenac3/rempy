@@ -1,6 +1,7 @@
 import entangle
 import base64
 import os
+import sys
 import json
 import datetime
 import time
@@ -68,8 +69,10 @@ def parse_args(args, conf):
             env["name"] = input("A name for your run is required! > ")
 
     if args[idx] == "--no-commit" or reconnect:
-        del conf["commit"]
-        del conf["tag"]
+        if "commit" in conf:
+            del conf["commit"]
+        if "tag" in conf:
+            del conf["tag"]
         idx = idx + 1
     if not "name" in env and ("commit" in conf or "tag" in conf):
         raise RuntimeError("For commiting or tagging a name is mandatory!")
@@ -122,7 +125,10 @@ def main(args):
     password = conf["user"]["password"]
 
     # Connect to server
-    entanglement = entangle.connect(host=host, port=port, password=password, user=user)
+    try:
+        entanglement = entangle.connect(host=host, port=port, password=password, user=user)
+    except KeyboardInterrupt:
+        return
     entanglement.protocol = "rempy"
 
     def rprint(*args, **kwargs):
@@ -156,13 +162,23 @@ def main(args):
         # Tell server what file to run and how and then forward output/input until connection is closed by server
         entanglement.rempy_command = command
     try:
-        entanglement.join()
+        while entanglement.is_alive():
+            time.sleep(1)
     except KeyboardInterrupt:
         pname = entanglement.rempy_pname
-        entanglement.close()
-        print()
-        print("Detached.")
-        if port != DEFAULT_PORT:
-            print("Reconnect by:    rempy {}:{} -r {}".format(host, port, pname))
+        action = input("\nDetach only? [Y/n]\n")
+        if action != "n" and action != "N":
+            entanglement.close()
+            print()
+            print("Detached.")
+            if port != DEFAULT_PORT:
+                print("Reconnect by:    rempy {}:{} -r {}".format(host, port, pname))
+            else:
+                print("Reconnect by:    rempy {} -r {}".format(host, pname))
         else:
-            print("Reconnect by:    rempy {} -r {}".format(host, pname))
+            env["kill"] = True
+            entanglement.rempy_env = env
+            entanglement.join()
+            entanglement.close()
+            print()
+            print("Killed {} on {}".format(pname, host))

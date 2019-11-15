@@ -189,12 +189,15 @@ class Server(object):
                 pname = res
 
         entanglement.rempy_pname = pname
-        if env["kill"]:
+        if env["kill"] and pname in self.processes:
             self.processes[pname].kill()
             print("Killed Process: {}".format(pname))
 
         # Forward outputs/inputs to network
         while pname in self.results:
+            if entanglement.get("rempy_env")["kill"] and pname in self.processes:
+                self.processes[pname].kill()
+                print("Killed Process: {}".format(pname))
             update = self.results[pname].get_update(local_result)
             rprint(update, end="")
             if pname not in self.processes:
