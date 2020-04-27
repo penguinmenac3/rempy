@@ -145,6 +145,9 @@ class Server(object):
 
             # Wait for instructions what to run and how
             command = entanglement.get("rempy_command")
+            if len(command == 0):
+                entanglement.close()
+                return
 
             # Start program
             env["reconnect"] = "{}.{}".format(self.proc_id, env["name"])
