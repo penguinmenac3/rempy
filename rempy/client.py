@@ -90,6 +90,9 @@ def parse_args(args, conf):
 
     if reconnect:
         command = None
+    elif args[idx] == "--push":  # simply push an update
+        command = []
+        env["mode"] = "python"
     elif args[idx] == "-m":  # Python Module
         command = ["python"] + args[idx:]
         env["mode"] = "python"
