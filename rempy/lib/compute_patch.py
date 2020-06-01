@@ -38,7 +38,7 @@ def __get_all_files(root, forbidden_list):
         files = [x for x in files if not __ignore(x, forbidden_list)]
         subdirs[:] = [x for x in subdirs if not x.startswith(".") and not __ignore(x, forbidden_list)]
         for name in files:
-            all_files.append(os.path.join(path, name).replace(root_with_sep, ""))
+            all_files.append(os.path.join(path, name).replace(root_with_sep, "").replace(os.sep, "/"))
     return all_files
 
 
@@ -74,11 +74,11 @@ def __diff(should_be, current_state, verbose=False):
 def get_files_hash_map(root, forbidden_list):
     forbidden_list.extend(PYTHON_IGNORE_LIST)
     files = __get_all_files(root, forbidden_list)
-    md5s = [__md5(os.path.join(root, f)) for f in files]
+    md5s = [__md5(os.path.join(root, f).replace(os.sep, "/")) for f in files]
     hash_map = dict(zip(files, md5s))
     return hash_map
 
-def pack_patch(folder, server_hashes, forbidden_list=[], verbose=False):
+def pack_patch(folder, server_hashes, forbidden_list=[], verbose=True):
     should_be = get_files_hash_map(folder, forbidden_list=forbidden_list)
     changed, deleted = __diff(should_be, server_hashes, verbose=verbose)
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
@@ -88,8 +88,8 @@ def pack_patch(folder, server_hashes, forbidden_list=[], verbose=False):
     with zipfile.ZipFile(patch_name, 'w', zipfile.ZIP_DEFLATED) as ziph:
         for file in changed:
             if verbose:
-                print(os.path.join(folder, file))
-            ziph.write(os.path.join(".", file))
+                print(os.path.join(folder, file).replace(os.sep, "/"))
+            ziph.write(os.path.join(".", file).replace(os.sep, "/"))
     if verbose:
         print("Packed patch in {}".format(patch_name))
     return patch_name, deleted
