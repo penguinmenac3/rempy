@@ -40,7 +40,7 @@ setup(
     author_email='mail@michaelfuerst.de',
     entry_points={
         'console_scripts': [
-            'rempy = rempy',
+            'rempy = rempy:main',
         ]
     }
 )
