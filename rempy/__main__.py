@@ -11,7 +11,7 @@ def print_help():
     print("rempy  # To run a server")
     print("")
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 2:
         server.main()
     elif sys.argv[1] == "config-server":
@@ -20,3 +20,6 @@ if __name__ == "__main__":
         client.config()
     else:
         client.main(sys.argv[1:])
+
+if __name__ == "__main__":
+    main()
