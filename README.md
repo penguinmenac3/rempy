@@ -24,11 +24,6 @@ Simply install it via pip.
 pip install rempy
 ```
 
-If you want to install it from source use this:
-```bash
-pip install git+https://github.com/penguinmenac3/rempy.git
-```
-
 ## Configure a server
 
 A configuration file contains
