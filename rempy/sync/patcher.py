@@ -1,11 +1,36 @@
+"""doc
+# patcher.py
+
+> Implements a tool to compute patches given a state.
+
+Simply call the pack_patch function with a path and a dict containing the hashes from the server.
+The server hashes will be stored in a ".md5.json", which is part of each patch.
+This way the server knows its hashes without any software required on the server.
+
+```
+server_hashes = {"fname": "md5"}
+folder = "."
+patch_file_path, deleted, hashes = pack_patch(folder, server_hashes, forbidden_list=[])
+# patch_file_path is the path to a zip with the changed files.
+# deleted is a list of deleted files.
+# hashes are the hashes both sides have once the patch is applied.
+```
+
+License: MIT (see main license)
+Authors:
+* Michael Fuerst (Lead)
+"""
 import os
+import json
 import shutil
 import hashlib
 import zipfile
 import time
 import datetime
 
+
 PYTHON_IGNORE_LIST = ["__pycache__", "*.pyc", ".ipynb_checkpoints", ".git", ".svn", ".hg", "CSV", ".DS_Store", "*.egg-info"]
+
 
 def __md5(fname):
     hash_md5 = hashlib.md5()
@@ -13,6 +38,7 @@ def __md5(fname):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
 
 def __ignore(candidate, forbidden_list):
     # Parse list to find simple placeholder notations
@@ -30,6 +56,7 @@ def __ignore(candidate, forbidden_list):
     for item in end_list:
         ignore_file |= candidate.endswith(item)
     return ignore_file
+
 
 def __get_all_files(root, forbidden_list):
     all_files = []
@@ -52,6 +79,7 @@ def __get_empty_folders(root, forbidden_list):
             empty_folders.append(path)
     return empty_folders
 
+
 def __diff(should_be, current_state, verbose=False):
     changed = []
     deleted = []
@@ -71,6 +99,7 @@ def __diff(should_be, current_state, verbose=False):
                 print("Deleted {}".format(k))
     return changed, deleted
 
+
 def get_files_hash_map(root, forbidden_list):
     forbidden_list.extend(PYTHON_IGNORE_LIST)
     files = __get_all_files(root, forbidden_list)
@@ -78,9 +107,17 @@ def get_files_hash_map(root, forbidden_list):
     hash_map = dict(zip(files, md5s))
     return hash_map
 
+
 def pack_patch(folder, server_hashes, forbidden_list=[], verbose=True):
     should_be = get_files_hash_map(folder, forbidden_list=forbidden_list)
     changed, deleted = __diff(should_be, server_hashes, verbose=verbose)
+    if len(changed) == 0 and len(deleted) == 0:
+        # If there is no change do not create a patch.
+        # Would be a waste of time...
+        return None, [], should_be
+    with open(os.path.join(folder, ".md5.json"), "w") as f:
+        f.write(json.dumps(should_be))
+    changed.append(".md5.json")
     timestamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H.%M.%S')
     patch_name = timestamp  + "_" + folder.replace("\\", "/").split("/")[-1] + ".zip"
     if verbose:
@@ -92,7 +129,8 @@ def pack_patch(folder, server_hashes, forbidden_list=[], verbose=True):
             ziph.write(os.path.join(".", file).replace(os.sep, "/"))
     if verbose:
         print("Packed patch in {}".format(patch_name))
-    return patch_name, deleted
+    os.remove(os.path.join(folder, ".md5.json"))
+    return patch_name, deleted, should_be
 
 
 def apply_patch(name, target):
@@ -105,17 +143,35 @@ def apply_patch(name, target):
         if os.path.exists(d):
             shutil.rmtree(d)
 
+
 def test_diff():
     server_hashes = get_files_hash_map(".", [])
     server_hashes["requirements.txt"] = "asdjwoegjowjf"
     server_hashes["foobar.txt"] = "siudgusejfroj"
     del server_hashes["README.md"]
-    patch_name, deleted = pack_patch("/home/fuerst/Git/rempy", server_hashes, verbose=True)
-    print(deleted)
+    patch_name, deleted, hashes = pack_patch("/home/fuerst/Git/rempy", server_hashes, verbose=True)
+    print(f"Patch file: {patch_name}")
+    print(f"Deleted: {deleted}")
     #apply_patch(patch_name, ".")
     os.remove(patch_name)
     print("Test: Successfull")
 
 
+def test_diff_no_patch():
+    server_hashes = get_files_hash_map(".", [])
+    patch_name, deleted, hashes = pack_patch("/home/fuerst/Git/rempy", server_hashes, verbose=True)
+    print(f"Patch file: {patch_name}")
+    print(f"Deleted: {deleted}")
+    #apply_patch(patch_name, ".")
+    if patch_name is not None:
+        os.remove(patch_name)
+    else:
+        print("Test: Successfull")
+
+
 if __name__ == "__main__":
+    print("# Test fake changes and patch packing.")
     test_diff()
+    print()
+    print("# Test no changes.")
+    test_diff_no_patch()

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
-__version__ = '20201010'
+__version__ = '2.0.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -40,7 +40,7 @@ setup(
     author_email='mail@michaelfuerst.de',
     entry_points={
         'console_scripts': [
-            'rempy = rempy.__main__:main',
+            'rempy = rempy.main:main',
         ]
     }
 )

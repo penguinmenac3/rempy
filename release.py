@@ -1,17 +1,6 @@
 import os
-import json
-
-TEST_RESULTS_FILENAME = "tests/results.txt"
 
 def run_tests():
-    # Runs all functions called test which are in the folder test named "test_*.py"
-    # The function has the signature test(old_results: dict, new_results:dict) -> success
-    old_results = {}
-    new_results = {}
-    if os.path.exists(TEST_RESULTS_FILENAME):
-        with open(TEST_RESULTS_FILENAME, "r") as f:
-            old_results = json.loads(f.read())
-
     positive = 0
     negative = 0
     failed = []
@@ -24,7 +13,12 @@ def run_tests():
         for k in test_case.__dict__:
             if k.startswith("test_"):
                 print("Running: {}.{}".format(test, k))
-                success = test_case.__dict__[k](old_results, new_results)
+                try:
+                    success = test_case.__dict__[k]()
+                except Exception as e:
+                    print("Exception:")
+                    print(e)
+                    success = False
                 if success:
                     print("Passed: {}.{}".format(test, k))
                     positive += 1
@@ -33,14 +27,12 @@ def run_tests():
                     negative += 1
                     failed.append("{}.{}".format(test, k))
                 print()
-    
-    with open(TEST_RESULTS_FILENAME, "w") as f:
-        f.write(json.dumps(new_results, indent=4, sort_keys=True))
 
     print("Successfull/Failed: {}/{}".format(positive, negative))
-    print("Failed Tests:")
-    for name in failed:
-        print("- {}".format(name))
+    if len(failed) > 0:
+        print("Failed Tests:")
+        for name in failed:
+            print("- {}".format(name))
     return negative == 0
 
 def update_setup_py(major_release=False, minor_release=False):
@@ -69,7 +61,6 @@ def update_setup_py(major_release=False, minor_release=False):
 def commit_and_push(version):
     # Add changed setup and the test results.
     os.system("git add setup.py")
-    os.system("git add " + TEST_RESULTS_FILENAME)
     os.system("git commit -m 'Version " + version + ".'")
     os.system("git push")
     # Also create tag for the version
@@ -81,16 +72,29 @@ def pip_publish():
     os.system("twine upload dist/*")
 
 def main(major_release=False, minor_release=False, dry_run=False):
+    print("Test: " if dry_run else "Release: ", end="")
+    if major_release:
+        print("Major")
+    elif minor_release:
+        print("Minor")
+    else:
+        print("Bugfix")
+    dry_run = True
     if run_tests():
-        if dry_run:
-            print("All tests successfull.")
-        else:
+        if not dry_run:
             version = update_setup_py(major_release, minor_release)
             commit_and_push(version)
             pip_publish()
             print("Released")
     else:
-        print("One or more tests failed!")
+        print("One or more tests failed! Cannot release!")
 
-main(major_release=True, minor_release=True, dry_run=True)
 
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--major", action="store_true", help="If this is a major release, i.e. api changed.")
+    parser.add_argument("--minor", action="store_true", help="If this is a minor release, i.e. added features.")
+    parser.add_argument("--test", action="store_true", help="Do not actually do the release, just test.")
+    args = parser.parse_args()
+    main(major_release=args.major, minor_release=args.minor, dry_run=args.test)
