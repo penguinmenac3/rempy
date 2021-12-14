@@ -58,12 +58,23 @@ def __ignore(candidate, forbidden_list):
     return ignore_file
 
 
+def __get_syncignore(folder):
+    syncignore = []
+    ignore_file = os.path.join(folder, ".syncignore")
+    if os.path.exists(ignore_file):
+        with open(ignore_file, "r") as f:
+            syncignore = f.read().split("\n")
+    return syncignore
+
+
 def __get_all_files(root, forbidden_list):
     all_files = []
     root_with_sep = root + os.sep
     for path, subdirs, files in os.walk(root):
-        files = [x for x in files if not __ignore(x, forbidden_list)]
-        subdirs[:] = [x for x in subdirs if not x.startswith(".") and not __ignore(x, forbidden_list)]
+        local_syncignore = __get_syncignore(path)
+        local_syncignore.extend(forbidden_list)
+        files = [x for x in files if not __ignore(x, local_syncignore)]
+        subdirs[:] = [x for x in subdirs if not x.startswith(".") and not __ignore(x, local_syncignore)]
         for name in files:
             all_files.append(os.path.join(path, name).replace(root_with_sep, "").replace(os.sep, "/"))
     return all_files

@@ -1,3 +1,5 @@
+example_ignored
+
 # Ignore caches and docs
 .cache
 __pycache__

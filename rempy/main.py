@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument("--launcher", default="python", required=False, help="What command is used to execute the provided file. Defaults to 'python'.")
     parser.add_argument("--interface", default="ssh", required=False, help="How to connect to the remote. Currently 'ssh' and 'slurm' are supported. Defaults to 'ssh'.")
     parser.add_argument("--interface_args", default="", required=False, help="Either a path or a string containing the arguments to pass to the remote interface command (e.g. srun for slurm).")
-    parser.add_argument("--watch", default=0, required=False, help="When larger than 0 continously syncs files every N seconds. Like sync does not execute any script.")
+    parser.add_argument("--watch", default=0, type=int, required=False, help="When larger than 0 continously syncs files every N seconds. Like sync does not execute any script.")
     args, other_args = parser.parse_known_args()
     args = vars(args)
     args["script"], args["host"], args["remote_path"] = parse_main(args['script@host[:/remote/path]'])
