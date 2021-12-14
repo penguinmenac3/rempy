@@ -7,87 +7,95 @@ License: MIT (see main license)
 Authors:
 * Michael Fuerst (Lead)
 """
-import sys
-import uuid
-
-try:
-    from pexpect import spawn as pexpect_spawn
-except ImportError:
-    from pexpect.popen_spawn import PopenSpawn
-
-    class pexpect_spawn(PopenSpawn):
-        def isalive(self):
-            return self.proc.poll() is None
+from uuid import uuid4
+from pexpect import spawn as pexpect_spawn
+import re
+def escape_ansi(line):
+    ansi_escape =re.compile(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]')
+    return ansi_escape.sub('', line)
 
 
-class RemoteCLI(object):
-    def __init__(self, host, user, remote_workdir, interface="ssh", interface_args=""):
-        self._uuid = uuid.UUID()
-        self._conn = None
-        self._original_host = host
-        self._host = host
-        self._user = user
-        self._remote_workdir = remote_workdir
-        self._interface = interface
-        self._interface_args = interface_args
-
-        if self._interface == "ssh":
-            self._connect_ssh()
-        elif self._interface == "slurm":
-            self._connect_ssh()
-            self._connect_slurm()
-        else:
-            raise NotImplementedError(f"No interface '{interface}' implemented.")
-        self._setup_env()
-
-    def _setup_env(self):
-        self.run(f"screen -S {self._uuid}")
-        self.expect_prompt()
-        print(f"### Screen name: {self._uuid} ###")
-        self.run(f"cd {self._remote_workdir}")
-        self.expect_prompt()
-
-    def _connect_ssh(self):
-        print("Connecting via SSH.")
-        self.run(f"ssh -o StrictHostKeyChecking=no {self._user}@{self._host}")
-        self.expect_prompt()
-
-    def _connect_slurm(self):
-        print("Connecting via SLURM (interactive)")
-        self.run(f"srun {self._interface_args} -v --pty bash -i" "")
-        self._host = self.expect("srun: Node (.*), .* tasks started")[0]
-        self.expect_prompt()
-
-    def expect(self, regex, has_return=True):
-        if self._conn is None:
-            raise RuntimeError("No connection available. Something broke in the init.")
-        self._conn.expect(regex)
-        if has_return:
-            return self._conn.match.groups()
-
-    def expect_prompt(self):
-        self.expect("\n.*@.*:.*")
-
-    def run(self, command, timeout=600):
+class CustomLogger(object):
+    def __init__(self) -> None:
+        self.output = False
+        self.command = ""
+    
+    def current_command(self, command):
         print(f"> {command}")
-        if self._conn is None:
-            self._conn = pexpect_spawn(command, timeout=timeout, logfile=sys.stdout)
+        self.command = command
+
+    def write(self, data):
+        try:
+            data = data.decode("utf-8")
+            data = escape_ansi(data)
+        except:
+            pass
+        if self.output:
+            if self.command not in data:
+                print(data, end="")
+    
+    def flush(self):
+        pass
+
+
+def _run(command, conn, logger):
+    logger.current_command(command)
+    if conn is None:
+        conn = pexpect_spawn(command, timeout=600, logfile=logger)
+    else:
+        conn.sendline(command)
+    return conn
+
+
+def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", interface_args=""):
+    # Initialize variables with defaults
+    _conn = None
+    _debug_conn = None
+    uuid = ""
+    debug_prefix = ""
+    logger = CustomLogger()
+    debug_conn_logger = CustomLogger()
+
+    # Validate arguments
+    if interface not in ["slurm", "ssh", "local"]:
+        raise NotImplementedError(f"No interface '{interface}' implemented.")
+
+    # Build command
+    if debug > 0 and launcher.startswith("python"):
+        debug_prefix = f"python -m debugpy --listen localhost:{debug} --wait-for-client "
+        launcher = launcher.replace("python", "")
+    command = f"cd {remote_workdir} && {debug_prefix}{launcher} {script}"
+    if interface in ["slurm"]:
+        command = f"srun {interface_args} -v {command}"
+    if interface in ["ssh", "slurm"]:
+        uuid = str(uuid4())
+        _conn = _run(f"ssh {user}@{host}", _conn, logger)
+        _conn.expect("\n.*@.*:.*")
+        command = f"screen -S {uuid} bash -c '{command}'"
+
+    logger.output = True
+    _conn = _run(command, _conn, logger)
+    if interface in ["slurm"]:
+        _conn.expect("srun: Node (.*), .* tasks started")[0]
+        node = _conn.match.groups()
+        if debug > 0:
+            inner_forward = f"ssh -N -L {debug}:localhost:{debug} {node}"
+            _debug_conn = _run(f"ssh -L {debug}:localhost:{debug} {user}@{host} {inner_forward}", _debug_conn, debug_conn_logger)
+            print("TODO forward port from node through head to us.")
+    if interface in ["ssh"] and debug:
+        _debug_conn = _run(f"ssh -N -L {debug}:localhost:{debug} {user}@{host}", _debug_conn, debug_conn_logger)
+
+    try:
+        if uuid != "":
+            _conn.expect("screen is terminating")
+            logger.output = False
+            _conn = _run("exit", _conn, logger)
+            _conn.expect("exit")
         else:
-            self._conn.sendline(command)
+            while _conn.isalive():
+                _conn.read()
+    except KeyboardInterrupt:
+        _conn.kill()
 
-    def execute_script(self, script, launcher, debug):
-        debug_prefix = ""
-        if debug:
-            # TODO populate debug prefix for debugging.
-            print("TODO populate debug prefix for debugging.")
-        command = f"{debug_prefix}{launcher} {script}"
-        self.run(command)
-        self.run("exit")
-        self.expect("exit")
-        if debug:
-            self.tunnel_debugger()
-        self.join()
-
-    def tunnel_debugger(self):
-        # TODO open SSH tunnel for debug ports.
-        print("TODO open SSH tunnel for debug ports.")
+    if debug > 0:
+        _debug_conn.kill(9)

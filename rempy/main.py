@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 
-from rempy.runtime.remote_cli import RemoteCLI
+from rempy.runtime.remote_cli import remoteExecute
 from rempy.sync.manager import SyncManager
 
 
@@ -26,7 +26,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("script@host[:/remote/path]", help="")
     parser.add_argument("--user", default=USER, required=USER is None, help="Specifies as what user to connect to the remote. Default will be $USER.")
-    parser.add_argument("--debug", action="store_true", help="Launches the code in debug mode (for VSCode) and forwards the debugger ports to localhost. See remote debugging in the readme.")
+    parser.add_argument("--debug", default=0, type=int, help="Specify a debug port. This causes the code to be launched in (VSCode) debug mode and ports are forwarded to localhost.")
     parser.add_argument("--dir", default=os.getcwd(), required=False, help="Defines which folder (and all subfolders) should be mirrored to the remote. Default is the current working directory.")
     parser.add_argument("--sync", action="store_true", help="Set this flag if you do not want ot execute a script on the remote but just mirror the directory.")
     parser.add_argument("--launcher", default="python", required=False, help="What command is used to execute the provided file. Defaults to 'python'.")
@@ -82,9 +82,7 @@ def run_remote(host, user, remote_path, interface, interface_args, launcher, scr
             print("Overwrite interface to 'slurm', since a slurm config was provided.")
         with open(interface_args, "r") as f:
             interface_args = f.read()
-    cli = RemoteCLI(host, user, remote_path, interface, interface_args)
-    cli.execute_script(script, launcher, debug)
-    cli.close()
+    remoteExecute(host, user, remote_path, script, launcher, debug, interface, interface_args)
 
 
 def sync_remote(host, user, dir, remote_path, watch, **ignore):
