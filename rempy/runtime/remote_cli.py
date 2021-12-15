@@ -47,7 +47,7 @@ def _run(command, conn, logger):
     return conn
 
 
-def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", interface_args=""):
+def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", ssh_args="", slurm_args="", pre_launch=""):
     # Initialize variables with defaults
     _conn = None
     _debug_conn = None
@@ -64,26 +64,28 @@ def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interfa
     if debug > 0 and launcher.startswith("python"):
         debug_prefix = f"python -m debugpy --listen localhost:{debug} --wait-for-client "
         launcher = launcher.replace("python", "")
-    command = f"cd {remote_workdir} && {debug_prefix}{launcher} {script}"
+    if pre_launch != "":
+        pre_launch = f" && {pre_launch}"
+    command = f"cd {remote_workdir}{pre_launch} && {debug_prefix}{launcher} {script}"
+    command = f"bash -c '{command}'"
     if interface in ["slurm"]:
-        command = f"srun {interface_args} -v {command}"
+        command = f"srun {slurm_args} -v {command}"
     if interface in ["ssh", "slurm"]:
         uuid = str(uuid4())
-        _conn = _run(f"ssh {user}@{host}", _conn, logger)
+        _conn = _run(f"ssh {ssh_args} {user}@{host}", _conn, logger)
         _conn.expect("\n.*@.*:.*")
-        command = f"screen -S {uuid} bash -c '{command}'"
+        command = f"screen -S {uuid} {command}"
 
     logger.output = True
     _conn = _run(command, _conn, logger)
     if interface in ["slurm"]:
-        _conn.expect("srun: Node (.*), .* tasks started")[0]
-        node = _conn.match.groups()
+        _conn.expect("srun: Node (.*), .* tasks started")
+        node = _conn.match.groups()[0].decode("utf-8")
         if debug > 0:
-            inner_forward = f"ssh -N -L {debug}:localhost:{debug} {node}"
-            _debug_conn = _run(f"ssh -L {debug}:localhost:{debug} {user}@{host} {inner_forward}", _debug_conn, debug_conn_logger)
-            print("TODO forward port from node through head to us.")
+            inner_forward = f"ssh -o StrictHostKeyChecking=no -N -L {debug}:localhost:{debug} {node}"
+            _debug_conn = _run(f"ssh {ssh_args} -L {debug}:localhost:{debug} {user}@{host} {inner_forward}", _debug_conn, debug_conn_logger)
     if interface in ["ssh"] and debug:
-        _debug_conn = _run(f"ssh -N -L {debug}:localhost:{debug} {user}@{host}", _debug_conn, debug_conn_logger)
+        _debug_conn = _run(f"ssh {ssh_args} -N -L {debug}:localhost:{debug} {user}@{host}", _debug_conn, debug_conn_logger)
 
     try:
         if uuid != "":

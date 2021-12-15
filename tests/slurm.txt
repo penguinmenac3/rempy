@@ -1,0 +1,4 @@
+--job-name=test
+--partition=batch
+--gpus-per-task=0
+--cpus-per-task=1
