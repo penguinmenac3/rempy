@@ -49,7 +49,7 @@ def parse_args():
     if args["package_name"] is None:
         args["package_name"] = os.path.basename(os.path.abspath(args["dir"]))
     del args['script@host[:/remote/path]']
-    args["args"] = other_args
+    args["args"] = " ".join(other_args)
     return args
 
 
@@ -94,7 +94,7 @@ def try_file_reading(args):
     return args
 
 
-def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, debug, pre_launch, package_name, conda, logfile, **ignore):
+def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, args, debug, pre_launch, package_name, conda, logfile, **ignore):
     if conda is not None:
         config = get_hosts_config()
         if host in config and "conda_init" in config[host]:
@@ -110,7 +110,7 @@ def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launche
     ssh_args = try_file_reading(ssh_args)
     slurm_args = try_file_reading(slurm_args)
     remote_path = os.path.join(remote_path, package_name)
-    remoteExecute(host, user, remote_path, script, launcher, debug, interface, ssh_args, slurm_args, pre_launch, logfile)
+    remoteExecute(host, user, remote_path, script, args, launcher, debug, interface, ssh_args, slurm_args, pre_launch, logfile)
 
 
 def sync_remote(host, user, dir, remote_path, watch, package_name, **ignore):

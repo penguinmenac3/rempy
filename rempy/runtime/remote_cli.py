@@ -50,7 +50,7 @@ def _run(command, conn, logger):
     return conn
 
 
-def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", ssh_args="", slurm_args="", pre_launch="", logfile=None):
+def remoteExecute(host, user, remote_workdir, script, args, launcher, debug=0, interface="ssh", ssh_args="", slurm_args="", pre_launch="", logfile=None):
     # Initialize variables with defaults
     _conn = None
     _debug_conn = None
@@ -69,10 +69,10 @@ def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interfa
         launcher = launcher.replace("python", "")
     if pre_launch != "":
         pre_launch = f" && {pre_launch}"
-    command = f"cd {remote_workdir}{pre_launch} && {debug_prefix}{launcher} {script}"
-    command = f"bash -c '{command}'"
+    command = f"cd {remote_workdir}{pre_launch} && {debug_prefix}{launcher} {script} {args}"
     if logfile is not None:
-        command = f"{command}  2>&1 | tee {logfile}"
+        command = f"echo > {logfile} && {command} 2>&1 | tee {logfile}"
+    command = f"bash -c '{command}'"
     if interface in ["slurm"]:
         command = f"srun {slurm_args} -v {command}"
     if interface in ["ssh", "slurm"]:
