@@ -44,7 +44,7 @@ class CustomLogger(object):
 def _run(command, conn, logger):
     logger.current_command(command)
     if conn is None:
-        conn = pexpect_spawn(command, timeout=600, logfile=logger)
+        conn = pexpect_spawn(command, timeout=None, logfile=logger)
     else:
         conn.sendline(command)
     return conn
