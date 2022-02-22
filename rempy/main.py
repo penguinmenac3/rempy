@@ -38,8 +38,11 @@ def parse_args():
     parser.add_argument("--pre_launch", default="", type=str, required=False, help="A command that is executed in the working directory before running your code.")
     parser.add_argument("--package_name", default=None, required=False, help="A custom name for the folder in remote_path where to store the code. (If you do not want a subfolder use '.'!)")
     parser.add_argument("--conda", default=None, required=False, help="Specify a conda environment to use.")
+    parser.add_argument("--logfile", default=None, required=False, help="Specify a file where to log all outputs of the main process.")
     args, other_args = parser.parse_known_args()
     args = vars(args)
+    if args["slurm_args"] != "":
+        args["interface"] = "slurm"
     if args["m"]:
         args["launcher"] = "python -m"
     args["script"], args["host"], args["remote_path"] = parse_main(args['script@host[:/remote/path]'])
@@ -91,9 +94,7 @@ def try_file_reading(args):
     return args
 
 
-def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, debug, pre_launch, package_name, conda, **ignore):
-    if os.path.exists(slurm_args):
-        interface = "slurm"
+def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, debug, pre_launch, package_name, conda, logfile, **ignore):
     if conda is not None:
         config = get_hosts_config()
         if host in config and "conda_init" in config[host]:
@@ -105,11 +106,11 @@ def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launche
             os._exit(0)
         if pre_launch != "":
             pre_launch = f"&& {pre_launch}"
-        pre_launch = f"{conda_init} && conda activate {conda}"
+        pre_launch = f"{conda_init} && conda activate {conda}{pre_launch}"
     ssh_args = try_file_reading(ssh_args)
     slurm_args = try_file_reading(slurm_args)
     remote_path = os.path.join(remote_path, package_name)
-    remoteExecute(host, user, remote_path, script, launcher, debug, interface, ssh_args, slurm_args, pre_launch)
+    remoteExecute(host, user, remote_path, script, launcher, debug, interface, ssh_args, slurm_args, pre_launch, logfile)
 
 
 def sync_remote(host, user, dir, remote_path, watch, package_name, **ignore):

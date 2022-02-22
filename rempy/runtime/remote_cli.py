@@ -31,8 +31,11 @@ class CustomLogger(object):
         except:
             pass
         if self.output:
-            if self.command not in data:
-                print(data, end="")
+            try:
+                if self.command not in data:
+                    print(data, end="")
+            except Exception as e:
+                print("REMPY EXCEPTION", e)
     
     def flush(self):
         pass
@@ -47,7 +50,7 @@ def _run(command, conn, logger):
     return conn
 
 
-def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", ssh_args="", slurm_args="", pre_launch=""):
+def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interface="ssh", ssh_args="", slurm_args="", pre_launch="", logfile=None):
     # Initialize variables with defaults
     _conn = None
     _debug_conn = None
@@ -68,12 +71,15 @@ def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interfa
         pre_launch = f" && {pre_launch}"
     command = f"cd {remote_workdir}{pre_launch} && {debug_prefix}{launcher} {script}"
     command = f"bash -c '{command}'"
+    if logfile is not None:
+        command = f"{command}  2>&1 | tee {logfile}"
     if interface in ["slurm"]:
         command = f"srun {slurm_args} -v {command}"
     if interface in ["ssh", "slurm"]:
         uuid = str(uuid4())
-        _conn = _run(f"ssh {ssh_args} {user}@{host}", _conn, logger)
-        _conn.expect("\n.*@.*:.*")
+        if host != "localhost":
+            _conn = _run(f"ssh {ssh_args} {user}@{host}", _conn, logger)
+            _conn.expect("\n.*@.*:.*")
         command = f"screen -S {uuid} {command}"
 
     logger.output = True
@@ -83,9 +89,16 @@ def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interfa
         node = _conn.match.groups()[0].decode("utf-8")
         if debug > 0:
             inner_forward = f"ssh -o StrictHostKeyChecking=no -N -L {debug}:localhost:{debug} {node}"
-            _debug_conn = _run(f"ssh {ssh_args} -L {debug}:localhost:{debug} {user}@{host} {inner_forward}", _debug_conn, debug_conn_logger)
+            if host != "localhost":
+                # Forward port again if not on localhost.
+                _debug_conn = _run(f"ssh {ssh_args} -L {debug}:localhost:{debug} {user}@{host} {inner_forward}", _debug_conn, debug_conn_logger)
+            else:
+                # Only use inner forward if on slurm head node.
+                _debug_conn = _run(inner_forward)
     if interface in ["ssh"] and debug:
-        _debug_conn = _run(f"ssh {ssh_args} -N -L {debug}:localhost:{debug} {user}@{host}", _debug_conn, debug_conn_logger)
+        # Forward port if not on localhost.
+        if debug > 0 and host != "localhost":
+            _debug_conn = _run(f"ssh {ssh_args} -N -L {debug}:localhost:{debug} {user}@{host}", _debug_conn, debug_conn_logger)
 
     try:
         if uuid != "":
@@ -99,5 +112,5 @@ def remoteExecute(host, user, remote_workdir, script, launcher, debug=0, interfa
     except KeyboardInterrupt:
         _conn.kill()
 
-    if debug > 0:
+    if _debug_conn is not None:
         _debug_conn.kill(9)
