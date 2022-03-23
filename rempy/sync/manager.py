@@ -48,8 +48,9 @@ class SyncManager(object):
             hashes = self._get_remote_hashes()
         patch_path, deleted, hashes = pack_patch(self._local_workdir, hashes)
         if patch_path is not None:
+            self._run(f"ssh {self._user}@{self._host} \"mkdir -p {self._remote_workdir}\"")
             self._run(f"scp {patch_path} {self._user}@{self._host}:{self._remote_workdir}/patch.zip")
-            self._run(f"ssh {self._user}@{self._host} \"cd {self._remote_workdir} && ls -lah && unzip -o patch.zip -d '{self._package_name}' && rm patch.zip\"")
+            self._run(f"ssh {self._user}@{self._host} \"cd {self._remote_workdir} && unzip -q -o patch.zip -d '{self._package_name}' && rm patch.zip\"")
             self._run(f"rm {patch_path}")
             if len(deleted) > 0:
                 deleted = " ".join(deleted)

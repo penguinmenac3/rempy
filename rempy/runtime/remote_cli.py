@@ -68,8 +68,8 @@ def remoteExecute(host, user, remote_workdir, script, args, launcher, debug=0, i
         debug_prefix = f"python -m debugpy --listen localhost:{debug} --wait-for-client "
         launcher = launcher.replace("python", "")
     if pre_launch != "":
-        pre_launch = f" && {pre_launch}"
-    command = f"cd {remote_workdir}{pre_launch} && {debug_prefix}{launcher} {script} {args}"
+        pre_launch = f"cd {remote_workdir} && {pre_launch} && "
+    command = f"{pre_launch}cd {remote_workdir} && {debug_prefix}{launcher} {script} {args}"
     if logfile is not None:
         command = f"echo > {logfile} && {command} 2>&1 | tee {logfile}"
     command = f"bash -c '{command}'"

@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument("--package_name", default=None, required=False, help="A custom name for the folder in remote_path where to store the code. (If you do not want a subfolder use '.'!)")
     parser.add_argument("--conda", default=None, required=False, help="Specify a conda environment to use.")
     parser.add_argument("--logfile", default=None, required=False, help="Specify a file where to log all outputs of the main process.")
+    parser.add_argument("--args", default="", required=False, type=str, help="Arugments for the script called.")
     args, other_args = parser.parse_known_args()
     args = vars(args)
     if args["slurm_args"] != "":
@@ -49,7 +50,7 @@ def parse_args():
     if args["package_name"] is None:
         args["package_name"] = os.path.basename(os.path.abspath(args["dir"]))
     del args['script@host[:/remote/path]']
-    args["args"] = " ".join(other_args)
+    args["args"] = " ".join([args["args"]] + other_args)
     return args
 
 

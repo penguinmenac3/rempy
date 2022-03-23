@@ -119,7 +119,7 @@ def get_files_hash_map(root, forbidden_list):
     return hash_map
 
 
-def pack_patch(folder, server_hashes, forbidden_list=[], verbose=True):
+def pack_patch(folder, server_hashes, forbidden_list=[], verbose=False):
     should_be = get_files_hash_map(folder, forbidden_list=forbidden_list)
     changed, deleted = __diff(should_be, server_hashes, verbose=verbose)
     if len(changed) == 0 and len(deleted) == 0:
