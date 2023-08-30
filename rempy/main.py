@@ -1,10 +1,16 @@
 import argparse
 import json
 import os
+import time as __time
+import datetime as __datetime
 
 from rempy.runtime.remote_cli import remoteExecute
 from rempy.sync.manager import SyncManager
 
+
+def get_timestamp() -> str:
+    time_stamp = __datetime.datetime.fromtimestamp(__time.time()).strftime('%Y-%m-%d_%H%M%S')
+    return time_stamp
 
 def get_env(name):
     if name in os.environ:
@@ -40,6 +46,8 @@ def parse_args():
     parser.add_argument("--conda", default=None, required=False, help="Specify a conda environment to use.")
     parser.add_argument("--logfile", default=None, required=False, help="Specify a file where to log all outputs of the main process.")
     parser.add_argument("--args", default="", required=False, type=str, help="Arugments for the script called.")
+    parser.add_argument("--run_path", default="", required=False, type=str, help="A folder where to copy the code to before executing it.")
+    parser.add_argument("--run_name", default="", required=False, type=str, help="A name for the run that is executed. (Requires rnu_path from config or as argument.)")
     args, other_args = parser.parse_known_args()
     args = vars(args)
     if args["slurm_args"] != "":
@@ -95,9 +103,9 @@ def try_file_reading(args):
     return args
 
 
-def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, args, debug, pre_launch, package_name, conda, logfile, **ignore):
+def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launcher, script, args, debug, pre_launch, package_name, conda, logfile, run_path, run_name, **ignore):
+    config = get_hosts_config()
     if conda is not None:
-        config = get_hosts_config()
         if host in config and "conda_init" in config[host]:
             conda_init = config[host]["conda_init"]
         else:
@@ -108,10 +116,30 @@ def run_remote(host, user, remote_path, interface, ssh_args, slurm_args, launche
         if pre_launch != "":
             pre_launch = f"&& {pre_launch}"
         pre_launch = f"{conda_init} && conda activate {conda}{pre_launch}"
+    if run_path == "" and host in config and "run_path" in config[host]:
+        run_path = config[host]["run_path"]
+    if run_name != "" and run_path == "":
+        print("ERROR: No run_path in host configuration found.")
+        print("  When setting a run_name, the run_path must also be set.")
+        print("  You can set the run_path in the config or as a command line argument.")
+        print("  Example Config: {'example.com': {'run_path': '/foo/bar/MyRuns'")
+        os.exit(0)
+    if run_path != "":
+        timestamp = get_timestamp()
+        if run_name != "":
+            run_name = "_" + run_name
+        run_name = timestamp + run_name
+        run_path = os.path.join(run_path, run_name)
+
+        if logfile is not None:
+            logfile = "_" + logfile
+        else:
+            logfile = "_log.txt"
+        logfile = timestamp + logfile
     ssh_args = try_file_reading(ssh_args)
     slurm_args = try_file_reading(slurm_args)
     remote_path = os.path.join(remote_path, package_name)
-    remoteExecute(host, user, remote_path, script, args, launcher, debug, interface, ssh_args, slurm_args, pre_launch, logfile)
+    remoteExecute(host, user, remote_path, script, args, launcher, debug, interface, ssh_args, slurm_args, pre_launch, logfile, run_path)
 
 
 def sync_remote(host, user, dir, remote_path, watch, package_name, **ignore):
