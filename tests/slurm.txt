@@ -2,3 +2,5 @@
 --partition=batch
 --gpus-per-task=0
 --cpus-per-task=1
+--mem 4GB
+--time=00:05:00
